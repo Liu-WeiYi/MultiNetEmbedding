@@ -23,14 +23,12 @@ def prepare(folder_dir,DirectFlag=False):
     """ 1. Init """
     edge_list_files_dir = glob.glob(folder_dir+"*")
     NodesSet = set()
-    NodesSet_layers = {}
     EdgesList_layers = {}
     
     for dir in edge_list_files_dir:
         # 对每一层Layer，进行初始化
         edge_list = open(dir,'r')
         layer_name = dir
-        Nodes = set()
         EdgesList = []
         for line in edge_list.readlines():
             try:
@@ -41,8 +39,6 @@ def prepare(folder_dir,DirectFlag=False):
             # update NodesID Set
             NodesSet.add(src)
             NodesSet.add(dst)
-            Nodes.add(src)
-            Nodes.add(dst)
             # update EdgesID List
             edge = (src,dst)
             if edge not in EdgesList:
@@ -52,7 +48,6 @@ def prepare(folder_dir,DirectFlag=False):
                 EdgesList.append(reversed_edge)
         
         # update dicts
-        NodesSet_layers[dir] = Nodes
         EdgesList_layers[dir] = EdgesList
         
         edge_list.close()
@@ -64,7 +59,7 @@ def prepare(folder_dir,DirectFlag=False):
     
     print('Prepare Down...')
     
-    return NodesSet, NodesSet_layers, EdgesList_layers
+    return NodesSet, EdgesList_layers
 
 
 

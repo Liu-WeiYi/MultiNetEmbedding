@@ -10,7 +10,6 @@ import random
 import numpy as np
 import copy
 from prepare import prepare
-import math
 
 TestFlag = True
 
@@ -61,9 +60,9 @@ class NetEmbedding:
         self.__ignoreNodes = NodesSet - self.__hitNodes
         
         """ 将边和点 甩到 k维 空间上 """
-        self.__hitNodesVector = self.__initVectorSpace(self.__dim, self.__hitNodes, assignZero=False, normFlag=True)
-        self.__factPairVector = self.__initVectorSpace(self.__dim, self.__factPair, assignZero=False, normFlag=False)
-        self.__ignoreNodesVector = self.__initVectorSpace(self.__dim,self.__ignoreNodes, assignZero=True, normFlag=False)
+        self.__hitNodesVector = self.__initVectorSpace(self.__dim, self.__hitNodes)
+        self.__factPairVector = self.__initVectorSpace(self.__dim, self.__factPair)
+        self.__ignoreNodesVector = self.__initVectorSpace(self.__dim,self.__ignoreNodes, assignZero=True)
 
     #----------------------------------------------------------------------
     def train(self):
@@ -99,65 +98,31 @@ class NetEmbedding:
                     dist_fact = self.__L2_distance(fact)
                     dist_ill_fact = self.__L2_distance(ill_fact)
 
-                    
                     # only consider "≥0" cases!!
                     if dist_fact+self.__margin >= dist_ill_fact:
                         loss_value += dist_fact+self.__margin-dist_ill_fact
 
                         """ 4. 计算梯度, 并更新对应Value """
                         self.__cal_gradient(fact, ill_fact,replaceflag, self.__hitNodesVector, self.__factPairVector)
-                    
-                    #loss_value += dist_fact+self.__margin-dist_ill_fact
-                    ##print('\tdist_fact: %f'%dist_fact,end='\t')
-                    ##print('\tdist_ill_fact: %f'%dist_ill_fact,end='\t')
-                    ##print('\tcurrent loss: %f'%(dist_fact+self.__margin-dist_ill_fact))
-                    #self.__cal_gradient(fact, ill_fact,replaceflag, self.__hitNodesVector, self.__factPairVector)
 
                 """ 5. 完成一个batch之后，更新坐标"""
-                self.__hitNodesVector = copy.deepcopy(self.tmp_hitNodesVector)
-                self.__factPairVector = copy.deepcopy(self.tmp_factPairVector)
+                self.__hitNodesVector = self.tmp_hitNodesVector
+                self.__factPairVector = self.tmp_factPairVector
 
             """ 6. 做完所有batch之后，输出当前Loss Function的值 """
-            if epoch%100 == 0:
+            if epoch%200 == 0:
                 print("epoch: %d"%epoch, end='\t')
                 print("loss value: %f"%loss_value)
-            if epoch == 999:
-                print("epoch: 999", end='\t')
-                print("loss value: %f"%loss_value)
-
-    @property
-    #----------------------------------------------------------------------
-    def hitNodesVector(self):
-        """
-        @brief 返回当前网络的节点坐标
-        """
-        return self.__hitNodesVector
-    @property
-    #----------------------------------------------------------------------
-    def ignoreNodesVector(self):
-        """
-        @brief 返回当前网络没有用到的节点
-        """
-        return self.__ignoreNodesVector
-    @property
-    #----------------------------------------------------------------------
-    def EdgeVector(self):
-        """
-        @brief 返回当前网络的边坐标
-        """
-        return self.__factPairVector
-        
 
 
     #----------------------------------------------------------------------
-    def __initVectorSpace(self, dim, targetList, assignZero=False, normFlag=True):
+    def __initVectorSpace(self, dim, targetList, assignZero=False):
         """
         @brief 将当前targetList中的每一个元素投影到dim维空间中，
                并返回以每一个元素为KEY，dim维空间中的坐标为VALUE的字典
         @param dim 空间维数
         @param targetList 当前列表
         @param assignZero 标志位，为 TRUE 表示直接赋0元素
-        @param normFlag 标志位， 为 TRUE 表示需要归一化，这样做的目的是因为 relation 是不需要归一化的.
         @return targetList_Dict
         """
         targetList_dict = {}
@@ -173,7 +138,7 @@ class NetEmbedding:
                     target_vector.append(0)
 
             # normalization only for non-ingore case!
-            if normFlag is True:
+            if assignZero is False:
                 norm_factor = np.linalg.norm(target_vector)
                 target_vector = [tmp/norm_factor for tmp in target_vector]
 
@@ -234,7 +199,7 @@ class NetEmbedding:
         # calculate Distance
         L2_distance = np.linalg.norm(dst_vector-src_vector-edge_vector,2)
 
-        return L2_distance**2
+        return L2_distance
 
     #----------------------------------------------------------------------
     def __cal_gradient(self, fact, ill_fact,replaceflag, NodesVector, EdgeVector):
@@ -317,16 +282,16 @@ if TestFlag == True:
         =======================
         """
         DirectFlag = False
-        NodesSet, NodesSet_layers, EdgesList_layers = prepare(folder_dir,DirectFlag)
+        NodesSet, EdgesList_layers = prepare(folder_dir,DirectFlag)
         
         """
         =======================
         设置超参数
         =======================
         """
-        dimension = 100
+        dimension = 10
         margin = 1
-        Learning_rate = 0.1
+        Learning_rate = 0.001
         nbatch = 1
         nepoch = 1000
         error = 0.0000001
@@ -336,12 +301,7 @@ if TestFlag == True:
         =======================
         """
         for net in EdgesList_layers.keys():
-            print('current Nets: %s'%net,end='\t')
-            print('Nodes Number: %d'%len(NodesSet_layers[net]),end='\t')
-            print('Edges Number: %d'%len(EdgesList_layers[net]),end='\t')
-            #dimension = int(len(NodesSet_layers[net])**0.5)
-            print('dimension: %d'%dimension)
-            
+            print('current Nets: %s'%net)
             NetSpace = NetEmbedding(dimension, margin, Learning_rate, nbatch, nepoch, error)
             NetSpace.init_all_parameters(NodesSet, EdgesList_layers[net])
             NetSpace.train()
