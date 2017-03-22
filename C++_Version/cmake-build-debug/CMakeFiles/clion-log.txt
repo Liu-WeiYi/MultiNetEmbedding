@@ -1,0 +1,4 @@
+/Applications/CLion.app/Contents/bin/cmake/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" "/Users/weiyiliu/Documents/My Work at IBM/0. MySourceCode/MultiNetEmbedding/C++_Version"
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /Users/weiyiliu/Documents/My Work at IBM/0. MySourceCode/MultiNetEmbedding/C++_Version/cmake-build-debug
