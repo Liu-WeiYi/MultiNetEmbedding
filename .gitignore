@@ -107,3 +107,7 @@ C++_Version/.idea/.name
 *.cxx
 
 *.cbp
+
+*.gml
+
+*.o

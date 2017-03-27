@@ -162,16 +162,17 @@ public:
         cout<<"node_num="<<node_num<<endl;
     }
 
-    void run(int dim,double rate_in,double margin_in,string network_name)
+    void run(int dim,double rate_in,double margin_in,string network_name,int sample_number)
     {
         // n_in: dimension
         // rate_in: learning rate
         // margin_in: margin
         // metho_in: network_name
-        n = dim;
-        rate = rate_in;
-        margin = margin_in;
-        network_name = network_name;
+        this->n = dim;
+        this->rate = rate_in;
+        this->margin = margin_in;
+        this->network_name = network_name;
+        this->sample_number = sample_number;
         edge_vec.resize(edge_num);
         for (int i=0; i<edge_vec.size(); i++)
             edge_vec[i].resize(n);
@@ -211,6 +212,7 @@ private:
     int generate_flag; // 生成正负样本的方法
     // 1. generate_flag = 0 ---> 一个正样本，随机对应一个负样本
     // 2. generate_flag = 1 ---> 按照拓扑结构生成正负样本: 采用思想：目的节点的邻居中不与源节点直接相连的点，都当做负样本（根据三角形原则。。。）
+    int sample_number = 3; // 采样个数
 
     int edge_num,node_num;
     map<string,int> edge2id,node2id;
@@ -244,7 +246,9 @@ private:
         int epoch;
         for (epoch = 0; epoch < nepoch; epoch++)
         {
-            res=0;
+            res=0; // 当前epoch下的loss function 值
+            int total_ill_fact = 0; // 网络中总共生成的 ill 样本个数 --- 用在 CASE 1中
+
             for (int batch = 0; batch<nbatches; batch++) {
                 edge_vector_tmp = edge_vec;
                 node_vector_tmp = node_vec;
@@ -276,8 +280,12 @@ private:
                              /**
                               * 方法2：根据拓扑结构生成对应的 正样本和负样本
                              */
+                             // 0. 设置sample的长度（因为不sample的话会引起 loss function 的震荡！！）
+
                              // 1. 生成正样本序号
-                             int i = rand_max(src_list.size());
+//                             int i = rand_max(src_list.size());
+                             int i = k;
+
                              // 2. 根据正样本序号生成对应负样本
                              string src = id2node[src_list[i]];
                              string dst = id2node[dst_list[i]];
@@ -285,44 +293,73 @@ private:
                              set<string> src_neighbors = layer.neighbors(src);
                              set<string> dst_neighbors = layer.neighbors(dst);
                              //3. 负样本就是所有是dst的邻居，而不是src的邻居的节点
+
+                             // 应刘博士要求，加上每次的res输出
+                             // Add Time: 2017-03-26
+                             double current_res = 0.0;
                              if (rand() % 1000 < 500) {
                                  //src_index
                                  int src_index = node2id[src];
                                  // 替换目的节点
-                                 set<string> ill_dst;
-                                 ill_dst = ill_fact_generate(src_neighbors, dst_neighbors);
-                                 for (auto it = ill_dst.begin(); it != ill_dst.end(); it++) {
+                                 set<string> ill_dst_list;
+                                 ill_dst_list = ill_fact_generate(src_neighbors, dst_neighbors);
+
+                                 total_ill_fact += ill_dst_list.size();
+
+                                 set<string> sample_ill_dst_fact = sample_list(ill_dst_list,sample_number);
+
+                                 int count = 0;
+                                 for (auto it = sample_ill_dst_fact.begin(); it != sample_ill_dst_fact.end(); it++) {
                                      int ill_dst_id = node2id[*it];
                                      if (ill_dst_id != src_index) {
                                          int j = ill_dst_id;
-                                         train_fact(src_list[i], dst_list[i], edge_list[i], src_list[i], j,
+
+                                         current_res = train_fact(src_list[i], dst_list[i], edge_list[i], src_list[i], j,
                                                     edge_list[i]);
+
                                          norm(edge_vector_tmp[edge_list[i]]);
                                          norm(node_vector_tmp[src_list[i]]);
                                          norm(node_vector_tmp[dst_list[i]]);
                                          norm(node_vector_tmp[j]);
+
+                                         if(count > 3){break;}
+                                         else{count++;}
                                      }
                                  }
                              } else {
                                  //dst_index
                                  int dst_index = node2id[dst];
                                  // 替换源节点
-                                 set<string> ill_src;
-                                 ill_src = ill_fact_generate(dst_neighbors, src_neighbors);
-                                 for (auto it = ill_src.begin(); it != ill_src.end(); it++) {
+                                 set<string> ill_src_list;
+                                 ill_src_list = ill_fact_generate(dst_neighbors, src_neighbors);
+
+                                 total_ill_fact += ill_src_list.size();
+                                 set<string> sample_ill_src_fact = sample_list(ill_src_list,sample_number);
+
+                                 int count = 0;
+                                 for (auto it = sample_ill_src_fact.begin(); it != sample_ill_src_fact.end(); it++) {
                                      int ill_src_id = node2id[*it];
                                      if (ill_src_id != dst_index) {
                                          int j = ill_src_id;
-                                         train_fact(src_list[i], dst_list[i], edge_list[i], j, dst_list[i],
+                                         current_res = train_fact(src_list[i], dst_list[i], edge_list[i], j, dst_list[i],
                                                     edge_list[i]);
+
                                          norm(edge_vector_tmp[edge_list[i]]);
                                          norm(node_vector_tmp[src_list[i]]);
                                          norm(node_vector_tmp[dst_list[i]]);
                                          norm(node_vector_tmp[j]);
+
+                                         if(count > 3){break;}
+                                         else{count++;}
                                      }
                                  }
                              }
-                         break;
+/*                             // 应刘博士要求，加上每次的res输出
+                             // Add Time: 2017-03-26
+                             if (i==0){
+                                 cout << "\tcurrent_res: " << current_res << endl;
+                             }*/
+                             break;
                          }//case1 end
                      }//switch end
                 }//for end
@@ -330,6 +367,7 @@ private:
                 node_vec = node_vector_tmp;
 
             }
+//            cout<<"epoch:"<<epoch<<'\t'<<res<<"\ttotal_ill_fact: "<<total_ill_fact<<"\taverage_ill_fact: "<<total_ill_fact/src_list.size()<<endl;
             cout<<"epoch:"<<epoch<<'\t'<<res<<endl;
             FILE* f2 = fopen(("EdgeEmbedding_"+network_name+".txt").c_str(),"w");
             FILE* f3 = fopen(("NodeEmbedding_"+network_name+".txt").c_str(),"w");
@@ -396,7 +434,7 @@ private:
             node_vector_tmp[dst_ill][ii]+=rate*x;
         }
     }
-    void train_fact(int src_OK, int dst_OK, int edge_OK, int src_ill, int dst_ill, int edge_ill)
+    double train_fact(int src_OK, int dst_OK, int edge_OK, int src_ill, int dst_ill, int edge_ill)
     {
         double sum1 = calc_sum(src_OK,dst_OK,edge_OK);
         double sum2 = calc_sum(src_ill,dst_ill,edge_ill);
@@ -405,6 +443,31 @@ private:
             res+=margin+sum1-sum2;
             gradient( src_OK, dst_OK, edge_OK, src_ill, dst_ill, edge_ill);
         }
+        return margin+sum1-sum2;
+    }
+
+    set<string> sample_list(set<string> list, int number){
+        set<string> sample_results;
+
+        if (number >= list.size()){ // 如果采样个数大于了原本的 ill 个数，直接返回就OK
+            sample_results = list;
+        } else {
+            vector<string> tmp; // 将set转换成vector，好取下标。。。
+            for (auto it = list.begin();it!=list.end();it++){
+                tmp.push_back(*it);
+            }
+
+            bool continueFlag = true;
+            int count = 0;
+            while(continueFlag){
+                int randomIdx = rand()%tmp.size();
+                sample_results.insert(tmp[randomIdx]);
+                if (sample_results.size() >= 3){
+                    continueFlag = false;
+                }
+            }
+        }
+        return sample_results;
     }
 };
 
@@ -415,19 +478,26 @@ private:
 int main(int argc,char**argv)
 {
     /*
-     * 注意！！！
-     * generate_flag = 0 -> rate = 0.01
-     * generate_flag = 1 -> rate = 0.001
-     * 现在用:
-     * -dim 100 -L1_flag 1 -rate 0.001 -generate_flag 1 -margin 1 -network_name test -show_info 1
+     * 简单形式
+     * -network_name test -generate_flag 1
+     *
+     * 完整形式
+     * -network_name test -generate_flag 1 -sample_number 3 -dim 100 -L1_flag 1 -rate 0.001 -margin 1 -show_info 1
      * */
+
+    // 输入参数
     string network;
-    int dimension; // 维数 100
-    float rate; // 学习率 0.01
-    double margin; // 间隔 1
-    int L1_flag; // L1距离(=1)还是L2距离(=0) 1
-    int show_info; // 1
     int generate_flag; // 生成拓扑结构方式 随机生成负样本(=0) 、 根据三角形原理生成负样本(=1) 0
+
+    // 默认参数
+    int dimension = 100; // 维数 100
+    float rate = 0.001; // 学习率 0.001
+    double margin = 1; // Loss Function 中正样本和负样本之间的间隔 1
+    int L1_flag = 1; // L1距离(=1)还是L2距离(=0) 1
+    int show_info = 1; // 1
+    int sample_number = 3; // 采样负样本的个数, 默认为3个
+
+    // ----------------------------------------------------------------------------------
     int i;
     if ((i = ArgPos((char *)"-dim", argc, argv)) > 0) dimension = atoi(argv[i + 1]);
     if ((i = ArgPos((char *)"-rate", argc, argv)) > 0) rate = atof(argv[i + 1]);
@@ -436,6 +506,7 @@ int main(int argc,char**argv)
     if ((i = ArgPos((char *)"-L1_flag", argc, argv)) > 0) L1_flag = atoi(argv[i + 1]);
     if ((i = ArgPos((char *)"-show_info", argc, argv)) > 0) show_info = atoi(argv[i + 1]);
     if ((i = ArgPos((char *)"-generate_flag", argc, argv)) > 0) generate_flag = atoi(argv[i + 1]);
+    if ((i = ArgPos((char *)"-sample_number", argc, argv)) > 0) sample_number = atoi(argv[i + 1]);
 
     if (show_info == 1){
         cout<< "Set Information..." << endl;
@@ -445,7 +516,9 @@ int main(int argc,char**argv)
         cout<<"L1_Flag = "<<L1_flag<<endl;
         cout<<"generate_flag = "<<generate_flag<<endl;
         cout<<"network = "<<network<<endl;
+        cout<<"sample_number = "<<sample_number<<endl;
     }
+    // ----------------------------------------------------------------------------------
     string network_dir = network+"_tmp";
 
     string node_id_path = "../"+network_dir+"/node_2_id.txt";
@@ -454,7 +527,7 @@ int main(int argc,char**argv)
 
     Train train;
     train.prepare(node_id_path, edge_id_path, fact_path, (bool)L1_flag, generate_flag);
-    train.run(dimension,rate,margin,network);
+    train.run(dimension,rate,margin,network,sample_number);
 }
 
 
