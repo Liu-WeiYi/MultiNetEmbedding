@@ -214,6 +214,10 @@ private:
     // 2. generate_flag = 1 ---> 按照拓扑结构生成正负样本: 采用思想：目的节点的邻居中不与源节点直接相连的点，都当做负样本（根据三角形原则。。。）
     int sample_number = 3; // 采样个数
 
+    //add ignore fact
+    //add time 2017-03-27
+    set<string> ignore;
+
     int edge_num,node_num;
     map<string,int> edge2id,node2id;
     map<int,string> id2node,id2edge;
@@ -294,9 +298,6 @@ private:
                              set<string> dst_neighbors = layer.neighbors(dst);
                              //3. 负样本就是所有是dst的邻居，而不是src的邻居的节点
 
-                             // 应刘博士要求，加上每次的res输出
-                             // Add Time: 2017-03-26
-                             double current_res = 0.0;
                              if (rand() % 1000 < 500) {
                                  //src_index
                                  int src_index = node2id[src];
@@ -308,13 +309,13 @@ private:
 
                                  set<string> sample_ill_dst_fact = sample_list(ill_dst_list,sample_number);
 
-                                 int count = 0;
+//                                 int count = 0;
                                  for (auto it = sample_ill_dst_fact.begin(); it != sample_ill_dst_fact.end(); it++) {
                                      int ill_dst_id = node2id[*it];
                                      if (ill_dst_id != src_index) {
                                          int j = ill_dst_id;
 
-                                         current_res = train_fact(src_list[i], dst_list[i], edge_list[i], src_list[i], j,
+                                         train_fact(src_list[i], dst_list[i], edge_list[i], src_list[i], j,
                                                     edge_list[i]);
 
                                          norm(edge_vector_tmp[edge_list[i]]);
@@ -322,8 +323,8 @@ private:
                                          norm(node_vector_tmp[dst_list[i]]);
                                          norm(node_vector_tmp[j]);
 
-                                         if(count > 3){break;}
-                                         else{count++;}
+//                                         if(count > 3){break;}
+//                                         else{count++;}
                                      }
                                  }
                              } else {
@@ -336,12 +337,12 @@ private:
                                  total_ill_fact += ill_src_list.size();
                                  set<string> sample_ill_src_fact = sample_list(ill_src_list,sample_number);
 
-                                 int count = 0;
+//                                 int count = 0;
                                  for (auto it = sample_ill_src_fact.begin(); it != sample_ill_src_fact.end(); it++) {
                                      int ill_src_id = node2id[*it];
                                      if (ill_src_id != dst_index) {
                                          int j = ill_src_id;
-                                         current_res = train_fact(src_list[i], dst_list[i], edge_list[i], j, dst_list[i],
+                                         train_fact(src_list[i], dst_list[i], edge_list[i], j, dst_list[i],
                                                     edge_list[i]);
 
                                          norm(edge_vector_tmp[edge_list[i]]);
@@ -349,8 +350,8 @@ private:
                                          norm(node_vector_tmp[dst_list[i]]);
                                          norm(node_vector_tmp[j]);
 
-                                         if(count > 3){break;}
-                                         else{count++;}
+//                                         if(count > 3){break;}
+//                                         else{count++;}
                                      }
                                  }
                              }
@@ -368,7 +369,9 @@ private:
 
             }
 //            cout<<"epoch:"<<epoch<<'\t'<<res<<"\ttotal_ill_fact: "<<total_ill_fact<<"\taverage_ill_fact: "<<total_ill_fact/src_list.size()<<endl;
-            cout<<"epoch:"<<epoch<<'\t'<<res<<endl;
+            cout<<"epoch:"<<epoch<<'\t'<<res;
+            cout << "  ignore number: " << this->ignore.size() << endl;
+
             FILE* f2 = fopen(("EdgeEmbedding_"+network_name+".txt").c_str(),"w");
             FILE* f3 = fopen(("NodeEmbedding_"+network_name+".txt").c_str(),"w");
             for (int i=0; i<edge_num; i++)
@@ -434,16 +437,34 @@ private:
             node_vector_tmp[dst_ill][ii]+=rate*x;
         }
     }
-    double train_fact(int src_OK, int dst_OK, int edge_OK, int src_ill, int dst_ill, int edge_ill)
+
+    void train_fact(int src_OK, int dst_OK, int edge_OK, int src_ill, int dst_ill, int edge_ill)
     {
         double sum1 = calc_sum(src_OK,dst_OK,edge_OK);
         double sum2 = calc_sum(src_ill,dst_ill,edge_ill);
-        if (sum1+margin>sum2)
-        {
-            res+=margin+sum1-sum2;
-            gradient( src_OK, dst_OK, edge_OK, src_ill, dst_ill, edge_ill);
+
+        // add 看fact 和 ill_fact
+        // time:2017-03-27
+        string current_infor = id2node[src_OK] + "---" + id2node[dst_OK] + "---" + id2node[src_ill] + "---" + id2node[dst_ill];
+        if (this->ignore.find(current_infor) == this->ignore.end()){
+            if (sum1+margin<=sum2) {
+                this->ignore.insert(current_infor);
+            }
+            // end add
+
+            if (sum1+margin>sum2)
+            {
+                res+=margin+sum1-sum2;
+                gradient( src_OK, dst_OK, edge_OK, src_ill, dst_ill, edge_ill);
+            }
         }
-        return margin+sum1-sum2;
+
+
+//        if (sum1+margin>sum2)
+//        {
+//            res+=margin+sum1-sum2;
+//            gradient( src_OK, dst_OK, edge_OK, src_ill, dst_ill, edge_ill);
+//        }
     }
 
     set<string> sample_list(set<string> list, int number){
