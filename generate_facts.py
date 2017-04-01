@@ -5,9 +5,8 @@ import os
 
 file_name = sys.argv[1]
 raw_file = open(file_name,'r+')
-dir_name = file_name+'_tmp'
+dir_name = 'tmp'
 print('generate training data and store graph into gml...')
-
 
 if not os.path.exists(dir_name):
     os.mkdir(dir_name)
@@ -37,7 +36,7 @@ for line in raw_file.readlines():
     relation_id.add(relation)
     relation_id.add(relation_reverse)
 
-nx.write_gml(graph,'%s/%s.gml'%(dir_name,file_name))
+# nx.write_gml(graph,'%s/%s.gml'%(dir_name,file_name))
 
 entity_id = list(entity_id)
 relation_id = list(relation_id)
