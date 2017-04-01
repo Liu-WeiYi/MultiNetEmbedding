@@ -87,3 +87,25 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+C++_Version/.idea/.name
+
+*.iml
+
+*.xml
+
+*.gml
+
+*.cmake
+
+*.check_cache
+
+*.make
+
+*.cbp
+
+*.bin
+
+*.out
+
+*.cxx
