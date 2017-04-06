@@ -51,7 +51,7 @@ results_file.write('P'+'\t'+'NODE2VEC_P'+'\t'+'NODE2VEC_AUC'+'\t'+'Embedding_P'+
 BFSlist, Edgelist = read_data(origin_filename)
 
 print(('edge list size', len(Edgelist)))
-for pp in range(1,50,1):
+for pp in range(89,90,1):
   # T = linking_test.Test(BFSlist, Edgelist, float(sys.argv[2]))
   # p = 0.1
   pp = pp/100
