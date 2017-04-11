@@ -369,11 +369,13 @@ private:
 
             }
 //            cout<<"epoch:"<<epoch<<'\t'<<res<<"\ttotal_ill_fact: "<<total_ill_fact<<"\taverage_ill_fact: "<<total_ill_fact/src_list.size()<<endl;
-            cout<<"epoch:"<<epoch<<'\t'<<res;
-            cout << "  ignore number: " << this->ignore.size() << endl;
+            if (epoch % 10 == 0){
+                cout<<"epoch:"<<epoch<<'\t'<<res;
+                cout << "  ignore number: " << this->ignore.size() << endl;
+            }
 
-            FILE* f2 = fopen(("EdgeEmbedding_"+network_name+".txt").c_str(),"w");
-            FILE* f3 = fopen(("NodeEmbedding_"+network_name+".txt").c_str(),"w");
+            FILE* f2 = fopen(("tmp/"+network_name+".node").c_str(),"w");
+            FILE* f3 = fopen(("tmp/"+network_name+".edge").c_str(),"w");
             for (int i=0; i<edge_num; i++)
             {
                 for (int ii=0; ii<n; ii++)
@@ -542,9 +544,12 @@ int main(int argc,char**argv)
     // ----------------------------------------------------------------------------------
     string network_dir = network+"_tmp";
 
-    string node_id_path = "../"+network_dir+"/node_2_id.txt";
-    string edge_id_path = "../"+network_dir+"/edge_2_id.txt";
-    string fact_path = "../"+network_dir+"/src_dst_edge_fact.txt";
+    // string node_id_path = "../"+network_dir+"/node_2_id.txt";
+    // string edge_id_path = "../"+network_dir+"/edge_2_id.txt";
+    // string fact_path = "../"+network_dir+"/src_dst_edge_fact.txt";
+    string node_id_path = "./tmp/node_2_id.txt";
+    string edge_id_path = "./tmp/edge_2_id.txt";
+    string fact_path = "./tmp/src_dst_edge_fact.txt";
 
     Train train;
     train.prepare(node_id_path, edge_id_path, fact_path, (bool)L1_flag, generate_flag);

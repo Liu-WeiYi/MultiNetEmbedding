@@ -1,0 +1,14 @@
+A→C	0
+D→E	1
+F→E	2
+B→A	3
+E→F	4
+D→C	5
+D→F	6
+C→A	7
+C→D	8
+B→C	9
+E→D	10
+F→D	11
+A→B	12
+C→B	13
